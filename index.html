@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyWayビデオ通話デモ</title>
+    <!-- SkyWayのJavaScriptライブラリを読み込む -->
+    <script src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.js"></script>
+</head>
+<body>
+    <h1>SkyWayビデオ通話デモ</h1>
+
+    <!-- 自分の映像と相手の映像を表示するためのビデオタグ -->
+    <video id="localStream" autoplay muted playsinline></video>
+    <video id="remoteStream" autoplay playsinline></video>
+
+    <script>
+        // SkyWayのAPIキー（取得したAPIキーをこの変数に設定）
+        const apiKey = '59f9a3e0-ce71-487f-b434-89cf9d5e6fa0';  // ここにAPIキーを入れます
+
+        // SkyWay Peerオブジェクトの作成
+        const peer = new Peer({ key: apiKey, debug: 3 });
+
+        // 自分のPeerIDが生成されたときに実行される
+        peer.on('open', id => {
+            console.log('自分のPeerID: ' + id);
+            alert('あなたのPeerIDは: ' + id + 'です。これを相手に教えてください。');
+        });
+
+        // 自分のカメラとマイクにアクセスしてストリームを取得
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                // 自分の映像を表示する
+                const localVideo = document.getElementById('localStream');
+                localVideo.srcObject = stream;
+
+                // 相手のPeerIDを入力して通話を開始
+                const remotePeerId = prompt('相手のPeerIDを入力してください:');
+                const call = peer.call(remotePeerId, stream);
+
+                // 通話相手の映像を取得して表示
+                call.on('stream', remoteStream => {
+                    const remoteVideo = document.getElementById('remoteStream');
+                    remoteVideo.srcObject = remoteStream;
+                });
+            })
+            .catch(err => {
+                console.error('カメラ/マイクのストリーム取得に失敗しました:', err);
+            });
+
+        // 相手からの着信を処理
+        peer.on('call', call => {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(stream => {
+                    // 自分の映像/音声を使って通話に応答
+                    call.answer(stream);
+
+                    // 通話相手の映像を取得して表示
+                    call.on('stream', remoteStream => {
+                        const remoteVideo = document.getElementById('remoteStream');
+                        remoteVideo.srcObject = remoteStream;
+                    });
+                })
+                .catch(err => {
+                    console.error('着信に対する応答の際にエラーが発生しました:', err);
+                });
+        });
+    </script>
+</body>
+</html>
